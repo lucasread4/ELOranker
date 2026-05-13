@@ -55,6 +55,7 @@
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
+            align-items: center;
             gap: 25px;
         }
         .card {
@@ -95,7 +96,6 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            align-self: center;
             margin: 10px 0;
         }
         .button-bar {
@@ -163,6 +163,12 @@
             font-size: 0.75rem;
             color: #777;
         }
+        .vote-counter {
+            font-size: 0.9rem;
+            margin-top: 15px;
+            text-align: center;
+            color: #666;
+        }
         @media (max-width: 700px) {
             .item-name { font-size: 1.3rem; }
             .card { padding: 18px 8px; }
@@ -173,17 +179,18 @@
 <div class="container">
     <div class="header">
         <h1>📊 Group Priority Ranker</h1>
-        <div class="sub">Pick the item that matters MORE to the group</div>
-        <div class="rank-status" id="voteCountDisplay">— votes recorded</div>
+        <div class="sub">Click the item that matters MORE to the group</div>
+        <div class="rank-status" id="voteCountDisplay">Ready to rank!</div>
     </div>
 
     <div class="matchup-area" id="matchupArea">
         <div class="vs-container" id="vsContainer">
-            <!-- dynamic cards -->
+            <div class="loading">Loading items...</div>
         </div>
         <div class="button-bar">
             <button id="resultsBtn">📈 View Ranking & Results</button>
         </div>
+        <div class="vote-counter" id="voteCounter"></div>
     </div>
 
     <div class="results-section" id="resultsPanel" style="display: none;">
@@ -193,155 +200,173 @@
             <button id="closeResults">← Back to voting</button>
         </div>
     </div>
-    <footer>Every vote updates the Elo ranking. More votes = more stable priority.</footer>
+    <footer>Every vote updates the ranking. Higher score = higher priority to the group.</footer>
 </div>
 
 <script>
-    // ---------- CONFIG ----------
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbygtRKNugzWk7F5M28Uy-6xZKyA5vuAK901o2ZnJaReXGrV1BGLeP9CWAdAavBWi36g/exec";  // <--- PASTE YOUR GOOGLE APPS SCRIPT URL HERE
-
-    // ---------- GLOBALS ----------
-    let allItems = [];          // [{ id, name, elo:1500 }]
+    // DEFAULT ITEMS (works without Google Sheets)
+    const DEFAULT_ITEMS = [
+        { id: "1", name: "✅ Fast loading speed" },
+        { id: "2", name: "🎨 Beautiful design" },
+        { id: "3", name: "📱 Mobile friendly" },
+        { id: "4", name: "🔒 Security features" },
+        { id: "5", name: "📊 Analytics dashboard" },
+        { id: "6", name: "💬 User support chat" }
+    ];
+    
+    // CONFIG - Add your Google Sheets URL here if desired
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbygtRKNugzWk7F5M28Uy-6xZKyA5vuAK901o2ZnJaReXGrV1BGLeP9CWAdAavBWi36g/exec";  // Leave empty to use default items
+    
+    // GLOBALS
+    let allItems = [];
     let currentPair = { a: null, b: null };
     let sessionId = localStorage.getItem("ranker_session");
+    let totalVotes = 0;
+    
     if (!sessionId) {
         sessionId = "sess_" + Date.now() + "_" + Math.random().toString(36).substr(2, 8);
         localStorage.setItem("ranker_session", sessionId);
     }
-    let totalVotes = 0;        // not critical, just display
-
+    
     // Elo constants
     const K_FACTOR = 32;
     const DEFAULT_ELO = 1500;
-
-    // ---------- HELPER: Load items from Sheets ----------
-    async function fetchItems() {
-    try {
-        const url = `${SCRIPT_URL}?action=getItems`;
-        const resp = await fetch(url);
-        const items = await resp.json();
-        
-        // Check for error response
-        if (items.error) {
-            throw new Error(items.error);
-        }
-        
-        if (!items || items.length < 2) {
-            throw new Error("Need at least 2 items in the Items sheet");
-        }
-        
+    
+    // Load items from localStorage or defaults
+    function loadItems() {
         let storedRatings = {};
         try {
             storedRatings = JSON.parse(localStorage.getItem("item_elos") || "{}");
         } catch(e) {}
         
-        allItems = items.map(it => ({
-            id: it.id,
-            name: it.name,
-            elo: storedRatings[it.id] || DEFAULT_ELO
-        }));
+        // Use default items if no Google Sheets URL
+        if (!SCRIPT_URL) {
+            allItems = DEFAULT_ITEMS.map(it => ({
+                id: it.id,
+                name: it.name,
+                elo: storedRatings[it.id] || DEFAULT_ELO
+            }));
+            return true;
+        }
         
-        return true;
-    } catch (err) {
-        console.error(err);
-        document.getElementById("vsContainer").innerHTML = `<div class="loading">⚠️ ${err.message}<br><br>Make sure you:<br>1. Deployed the Apps Script as a Web App<br>2. Set execute as "Me" and access "Anyone"<br>3. Copied the correct URL into SCRIPT_URL</div>`;
+        // Otherwise try to load from Sheets (but default works immediately)
         return false;
     }
-}
-    // persist Elo to localStorage (and later we'll recalc after each vote)
+    
+    // Persist Elo to localStorage
     function persistElos() {
         let obj = {};
         allItems.forEach(it => { obj[it.id] = it.elo; });
         localStorage.setItem("item_elos", JSON.stringify(obj));
     }
-
-    // get two distinct random items (priority to less compared ones but simple random weighted by low comparison count? we'll do random selection but avoid same pair repeat too much)
+    
+    // Get random pair of items
     function getRandomPair() {
-        if (allItems.length < 2) return null;
+        if (!allItems || allItems.length < 2) return null;
+        
+        // Get indices ensuring they're different
         let idxA = Math.floor(Math.random() * allItems.length);
         let idxB = Math.floor(Math.random() * allItems.length);
-        while (idxA === idxB) {
+        while (idxA === idxB && allItems.length > 1) {
             idxB = Math.floor(Math.random() * allItems.length);
         }
+        
         return { a: allItems[idxA], b: allItems[idxB] };
     }
-
+    
+    // Render the two cards
     function renderMatchup() {
-    const container = document.getElementById("vsContainer");
-    if (!currentPair.a || !currentPair.b) {
-        container.innerHTML = "<div class='loading'>Preparing next matchup...</div>";
-        return;
-    }
-    container.innerHTML = `
-        <div class="card" data-choice="${currentPair.a.id}">
-            <div style="font-size: 2rem;">🧩</div>
-            <div class="item-name">${escapeHtml(currentPair.a.name)}</div>
-            <div style="font-size:0.8rem; margin-top:12px;">⭐ more important</div>
-        </div>
-        <div class="vs-badge">VS</div>
-        <div class="card" data-choice="${currentPair.b.id}">
-            <div style="font-size: 2rem;">⚖️</div>
-            <div class="item-name">${escapeHtml(currentPair.b.name)}</div>
-            <div style="font-size:0.8rem; margin-top:12px;">⭐ more important</div>
-        </div>
-    `;
-}
-    async function recordVote(winnerId) {
-    const winner = allItems.find(i => i.id === winnerId);
-    const loser = (currentPair.a.id === winnerId) ? currentPair.b : currentPair.a;
-    if (!winner || !loser) return;
-
-    // Update Elo locally first (optimistic update)
-    const expectedWinner = 1 / (1 + Math.pow(10, (loser.elo - winner.elo) / 400));
-    const expectedLoser = 1 / (1 + Math.pow(10, (winner.elo - loser.elo) / 400));
-    winner.elo = winner.elo + K_FACTOR * (1 - expectedWinner);
-    loser.elo = loser.elo + K_FACTOR * (0 - expectedLoser);
-    persistElos();
-
-    // Send to Google Sheets (don't wait for response to keep UI snappy)
-    try {
-        const params = new URLSearchParams();
-        params.append("action", "saveVote");
-        params.append("winnerId", winner.id);
-        params.append("loserId", loser.id);
-        params.append("sessionId", sessionId);
-        
-        const response = await fetch(`${SCRIPT_URL}?${params.toString()}`);
-        const result = await response.json();
-        
-        if (result.status === "success") {
-            totalVotes++;
-            document.getElementById("voteCountDisplay").innerHTML = `✓ ${totalVotes} votes recorded`;
-        } else {
-            console.warn("Vote saved locally but not to sheet:", result.error);
-            document.getElementById("voteCountDisplay").innerHTML = `⚠️ Vote recorded locally only`;
+        const container = document.getElementById("vsContainer");
+        if (!currentPair.a || !currentPair.b) {
+            container.innerHTML = "<div class='loading'>Not enough items to compare</div>";
+            return;
         }
-    } catch(err) {
-        console.warn("Could not reach Google Sheets:", err);
-        document.getElementById("voteCountDisplay").innerHTML = `⚠️ Offline mode - vote saved locally`;
+        
+        container.innerHTML = `
+            <div class="card" data-choice="${currentPair.a.id}">
+                <div style="font-size: 2rem;">🔹</div>
+                <div class="item-name">${escapeHtml(currentPair.a.name)}</div>
+                <div style="font-size:0.8rem; margin-top:12px; color:#2c7a4d;">← MORE IMPORTANT</div>
+            </div>
+            <div class="vs-badge">VS</div>
+            <div class="card" data-choice="${currentPair.b.id}">
+                <div style="font-size: 2rem;">🔸</div>
+                <div class="item-name">${escapeHtml(currentPair.b.name)}</div>
+                <div style="font-size:0.8rem; margin-top:12px; color:#2c7a4d;">MORE IMPORTANT →</div>
+            </div>
+        `;
     }
-
-    // Next matchup
-    currentPair = getRandomPair();
-    renderMatchup();
-    updateRankingDisplay();
-}
-
+    
+    // Record a vote and update Elo ratings
+    async function recordVote(winnerId) {
+        console.log("Vote recorded for:", winnerId);
+        
+        const winner = allItems.find(i => i.id === winnerId);
+        const loser = (currentPair.a.id === winnerId) ? currentPair.b : currentPair.a;
+        
+        if (!winner || !loser) {
+            console.error("Could not find winner or loser");
+            return;
+        }
+        
+        console.log(`Vote: ${winner.name} beats ${loser.name}`);
+        
+        // Calculate Elo changes
+        const expectedWinner = 1 / (1 + Math.pow(10, (loser.elo - winner.elo) / 400));
+        const expectedLoser = 1 / (1 + Math.pow(10, (winner.elo - loser.elo) / 400));
+        
+        winner.elo = winner.elo + K_FACTOR * (1 - expectedWinner);
+        loser.elo = loser.elo + K_FACTOR * (0 - expectedLoser);
+        
+        persistElos();
+        totalVotes++;
+        
+        // Update display
+        const voteCounter = document.getElementById("voteCounter");
+        if (voteCounter) {
+            voteCounter.innerHTML = `📊 ${totalVotes} vote${totalVotes !== 1 ? 's' : ''} recorded`;
+        }
+        
+        // Get next pair
+        currentPair = getRandomPair();
+        renderMatchup();
+        updateRankingDisplay();
+    }
+    
+    // Update the ranking view
+    function updateRankingDisplay() {
+        const sorted = [...allItems].sort((a,b) => b.elo - a.elo);
+        const listDiv = document.getElementById("resultsList");
+        if (!listDiv) return;
+        
+        listDiv.innerHTML = sorted.map((item, idx) => `
+            <li>
+                <span class="rank-number">${idx+1}</span>
+                <strong>${escapeHtml(item.name)}</strong>
+                <span class="score-badge">score ${Math.round(item.elo)}</span>
+            </li>
+        `).join('');
+    }
+    
+    // Show results panel
     function showResults() {
         updateRankingDisplay();
         document.getElementById("matchupArea").style.display = "none";
         document.getElementById("resultsPanel").style.display = "block";
     }
-
+    
+    // Hide results panel
     function hideResults() {
         document.getElementById("matchupArea").style.display = "block";
         document.getElementById("resultsPanel").style.display = "none";
-        // refresh a fresh pair
+        // Refresh to a new pair
         currentPair = getRandomPair();
         renderMatchup();
     }
-
+    
+    // Escape HTML
     function escapeHtml(str) {
+        if (!str) return '';
         return str.replace(/[&<>]/g, function(m) {
             if (m === '&') return '&amp;';
             if (m === '<') return '&lt;';
@@ -349,28 +374,78 @@
             return m;
         });
     }
-
-   async function init() {
-    const success = await fetchItems();
-    if (!success) return;
-    currentPair = getRandomPair();
-    renderMatchup();
     
-    // FIX: Use event delegation - single listener for all future cards
-    document.getElementById("vsContainer").addEventListener('click', function(e) {
-        const card = e.target.closest('.card');
-        if (card && card.dataset.choice) {
-            const chosenId = parseInt(card.dataset.choice);
-            recordVote(chosenId);
+    // Reset all rankings (admin function)
+    function resetRankings() {
+        if (confirm("Reset all rankings? This cannot be undone.")) {
+            localStorage.removeItem("item_elos");
+            loadItems();
+            persistElos();
+            totalVotes = 0;
+            currentPair = getRandomPair();
+            renderMatchup();
+            updateRankingDisplay();
+            document.getElementById("voteCounter").innerHTML = "";
+            alert("Rankings have been reset!");
         }
-    });
+    }
     
-    document.getElementById("resultsBtn").addEventListener("click", showResults);
-    document.getElementById("closeResults").addEventListener("click", hideResults);
-    document.getElementById("voteCountDisplay").innerText = `Ready — pick your priority`;
-    updateRankingDisplay();
-}
-
+    // Initialize the app
+    function init() {
+        console.log("Initializing ranker...");
+        
+        // Load items
+        loadItems();
+        
+        if (allItems.length === 0) {
+            console.error("No items loaded!");
+            document.getElementById("vsContainer").innerHTML = "<div class='loading'>Error: No items found. Please check configuration.</div>";
+            return;
+        }
+        
+        console.log(`Loaded ${allItems.length} items:`, allItems.map(i => i.name));
+        
+        // Get first random pair
+        currentPair = getRandomPair();
+        renderMatchup();
+        
+        // Set up event delegation for clicks on cards
+        const container = document.getElementById("vsContainer");
+        container.addEventListener('click', function(e) {
+            const card = e.target.closest('.card');
+            if (card && card.dataset.choice) {
+                console.log("Card clicked, choice:", card.dataset.choice);
+                const chosenId = card.dataset.choice;
+                recordVote(chosenId);
+            }
+        });
+        
+        // Set up button listeners
+        document.getElementById("resultsBtn").addEventListener("click", showResults);
+        document.getElementById("closeResults").addEventListener("click", hideResults);
+        
+        // Add reset button (optional - uncomment to add)
+        // const resetBtn = document.createElement("button");
+        // resetBtn.textContent = "🔄 Reset Rankings";
+        // resetBtn.style.marginLeft = "10px";
+        // resetBtn.onclick = resetRankings;
+        // document.querySelector(".button-bar").appendChild(resetBtn);
+        
+        // Update vote counter display
+        const savedVotes = localStorage.getItem("total_votes");
+        if (savedVotes) totalVotes = parseInt(savedVotes);
+        
+        document.getElementById("voteCountDisplay").innerText = `${allItems.length} items ready to rank!`;
+        
+        console.log("Initialization complete!");
+    }
+    
+    // Save vote count occasionally
+    setInterval(() => {
+        localStorage.setItem("total_votes", totalVotes);
+    }, 5000);
+    
+    // Start the app
     init();
 </script>
 </body>
