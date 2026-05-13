@@ -216,30 +216,38 @@
 
     // ---------- HELPER: Load items from Sheets ----------
     async function fetchItems() {
-        try {
-            const url = `${SCRIPT_URL}?action=getItems`;
-            const resp = await fetch(url);
-            const items = await resp.json();
-            if (!items || items.length < 2) throw new Error("Need at least 2 items in the Items sheet");
-            // attach local Elo (load from localStorage if exists)
-            let storedRatings = {};
-            try {
-                storedRatings = JSON.parse(localStorage.getItem("item_elos") || "{}");
-            } catch(e) {}
-            allItems = items.map(it => ({
-                id: it.id,
-                name: it.name,
-                elo: storedRatings[it.id] || DEFAULT_ELO
-            }));
-            // ensure we update after votes too
-            return true;
-        } catch (err) {
-            console.error(err);
-            document.getElementById("vsContainer").innerHTML = `<div class="loading">⚠️ Failed to load items. Check Apps Script URL and CORS. Ensure sheet is shared.</div>`;
-            return false;
+    try {
+        const url = `${SCRIPT_URL}?action=getItems`;
+        const resp = await fetch(url);
+        const items = await resp.json();
+        
+        // Check for error response
+        if (items.error) {
+            throw new Error(items.error);
         }
+        
+        if (!items || items.length < 2) {
+            throw new Error("Need at least 2 items in the Items sheet");
+        }
+        
+        let storedRatings = {};
+        try {
+            storedRatings = JSON.parse(localStorage.getItem("item_elos") || "{}");
+        } catch(e) {}
+        
+        allItems = items.map(it => ({
+            id: it.id,
+            name: it.name,
+            elo: storedRatings[it.id] || DEFAULT_ELO
+        }));
+        
+        return true;
+    } catch (err) {
+        console.error(err);
+        document.getElementById("vsContainer").innerHTML = `<div class="loading">⚠️ ${err.message}<br><br>Make sure you:<br>1. Deployed the Apps Script as a Web App<br>2. Set execute as "Me" and access "Anyone"<br>3. Copied the correct URL into SCRIPT_URL</div>`;
+        return false;
     }
-
+}
     // persist Elo to localStorage (and later we'll recalc after each vote)
     function persistElos() {
         let obj = {};
@@ -287,49 +295,45 @@
     }
 
     async function recordVote(winnerId) {
-        const winner = allItems.find(i => i.id === winnerId);
-        const loser = (currentPair.a.id === winnerId) ? currentPair.b : currentPair.a;
-        if (!winner || !loser) return;
+    const winner = allItems.find(i => i.id === winnerId);
+    const loser = (currentPair.a.id === winnerId) ? currentPair.b : currentPair.a;
+    if (!winner || !loser) return;
 
-        // update Elo locally first
-        const expectedWinner = 1 / (1 + Math.pow(10, (loser.elo - winner.elo) / 400));
-        const expectedLoser = 1 / (1 + Math.pow(10, (winner.elo - loser.elo) / 400));
-        winner.elo = winner.elo + K_FACTOR * (1 - expectedWinner);
-        loser.elo = loser.elo + K_FACTOR * (0 - expectedLoser);
-        persistElos();
+    // Update Elo locally first (optimistic update)
+    const expectedWinner = 1 / (1 + Math.pow(10, (loser.elo - winner.elo) / 400));
+    const expectedLoser = 1 / (1 + Math.pow(10, (winner.elo - loser.elo) / 400));
+    winner.elo = winner.elo + K_FACTOR * (1 - expectedWinner);
+    loser.elo = loser.elo + K_FACTOR * (0 - expectedLoser);
+    persistElos();
 
-        // send to Google Sheets
-        try {
-            const params = new URLSearchParams();
-            params.append("action", "saveVote");
-            params.append("winnerId", winner.id);
-            params.append("loserId", loser.id);
-            params.append("sessionId", sessionId);
-            await fetch(`${SCRIPT_URL}?${params.toString()}`);
+    // Send to Google Sheets (don't wait for response to keep UI snappy)
+    try {
+        const params = new URLSearchParams();
+        params.append("action", "saveVote");
+        params.append("winnerId", winner.id);
+        params.append("loserId", loser.id);
+        params.append("sessionId", sessionId);
+        
+        const response = await fetch(`${SCRIPT_URL}?${params.toString()}`);
+        const result = await response.json();
+        
+        if (result.status === "success") {
             totalVotes++;
-            document.getElementById("voteCountDisplay").innerText = `✓ ${totalVotes} votes recorded`;
-        } catch(err) {
-            console.warn("Vote not saved to sheet, but local ranking updated:", err);
+            document.getElementById("voteCountDisplay").innerHTML = `✓ ${totalVotes} votes recorded`;
+        } else {
+            console.warn("Vote saved locally but not to sheet:", result.error);
+            document.getElementById("voteCountDisplay").innerHTML = `⚠️ Vote recorded locally only`;
         }
-
-        // Next matchup
-        currentPair = getRandomPair();
-        renderMatchup();
-        updateRankingDisplay(); // optional show updated ranking realtime but we keep panel hidden
+    } catch(err) {
+        console.warn("Could not reach Google Sheets:", err);
+        document.getElementById("voteCountDisplay").innerHTML = `⚠️ Offline mode - vote saved locally`;
     }
 
-    function updateRankingDisplay() {
-        const sorted = [...allItems].sort((a,b) => b.elo - a.elo);
-        const listDiv = document.getElementById("resultsList");
-        if (!listDiv) return;
-        listDiv.innerHTML = sorted.map((item, idx) => `
-            <li>
-                <span class="rank-number">${idx+1}</span>
-                <strong>${escapeHtml(item.name)}</strong>
-                <span class="score-badge">priority score ${Math.round(item.elo)}</span>
-            </li>
-        `).join('');
-    }
+    // Next matchup
+    currentPair = getRandomPair();
+    renderMatchup();
+    updateRankingDisplay();
+}
 
     function showResults() {
         updateRankingDisplay();
