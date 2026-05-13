@@ -267,33 +267,25 @@
     }
 
     function renderMatchup() {
-        const container = document.getElementById("vsContainer");
-        if (!currentPair.a || !currentPair.b) {
-            container.innerHTML = "<div class='loading'>Preparing next matchup...</div>";
-            return;
-        }
-        container.innerHTML = `
-            <div class="card" data-choice="${currentPair.a.id}">
-                <div style="font-size: 2rem;">🧩</div>
-                <div class="item-name">${escapeHtml(currentPair.a.name)}</div>
-                <div style="font-size:0.8rem; margin-top:12px;">⭐ more important</div>
-            </div>
-            <div class="vs-badge">VS</div>
-            <div class="card" data-choice="${currentPair.b.id}">
-                <div style="font-size: 2rem;">⚖️</div>
-                <div class="item-name">${escapeHtml(currentPair.b.name)}</div>
-                <div style="font-size:0.8rem; margin-top:12px;">⭐ more important</div>
-            </div>
-        `;
-        // attach event listeners
-        document.querySelectorAll('.card').forEach(card => {
-            card.addEventListener('click', (e) => {
-                const chosenId = parseInt(card.dataset.choice);
-                recordVote(chosenId);
-            });
-        });
+    const container = document.getElementById("vsContainer");
+    if (!currentPair.a || !currentPair.b) {
+        container.innerHTML = "<div class='loading'>Preparing next matchup...</div>";
+        return;
     }
-
+    container.innerHTML = `
+        <div class="card" data-choice="${currentPair.a.id}">
+            <div style="font-size: 2rem;">🧩</div>
+            <div class="item-name">${escapeHtml(currentPair.a.name)}</div>
+            <div style="font-size:0.8rem; margin-top:12px;">⭐ more important</div>
+        </div>
+        <div class="vs-badge">VS</div>
+        <div class="card" data-choice="${currentPair.b.id}">
+            <div style="font-size: 2rem;">⚖️</div>
+            <div class="item-name">${escapeHtml(currentPair.b.name)}</div>
+            <div style="font-size:0.8rem; margin-top:12px;">⭐ more important</div>
+        </div>
+    `;
+}
     async function recordVote(winnerId) {
     const winner = allItems.find(i => i.id === winnerId);
     const loser = (currentPair.a.id === winnerId) ? currentPair.b : currentPair.a;
@@ -358,16 +350,26 @@
         });
     }
 
-    async function init() {
-        const success = await fetchItems();
-        if (!success) return;
-        currentPair = getRandomPair();
-        renderMatchup();
-        document.getElementById("resultsBtn").addEventListener("click", showResults);
-        document.getElementById("closeResults").addEventListener("click", hideResults);
-        document.getElementById("voteCountDisplay").innerText = `Ready — pick your priority`;
-        updateRankingDisplay();
-    }
+   async function init() {
+    const success = await fetchItems();
+    if (!success) return;
+    currentPair = getRandomPair();
+    renderMatchup();
+    
+    // FIX: Use event delegation - single listener for all future cards
+    document.getElementById("vsContainer").addEventListener('click', function(e) {
+        const card = e.target.closest('.card');
+        if (card && card.dataset.choice) {
+            const chosenId = parseInt(card.dataset.choice);
+            recordVote(chosenId);
+        }
+    });
+    
+    document.getElementById("resultsBtn").addEventListener("click", showResults);
+    document.getElementById("closeResults").addEventListener("click", hideResults);
+    document.getElementById("voteCountDisplay").innerText = `Ready — pick your priority`;
+    updateRankingDisplay();
+}
 
     init();
 </script>
