@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Group Priority Ranker</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body {
+            font-family: system-ui, 'Segoe UI', monospace;
+            background: #f5f3f0;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1300px;
+            width: 100%;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h1 {
+            font-size: 2rem;
+            margin: 0;
+            letter-spacing: -0.5px;
+        }
+        .sub {
+            color: #555;
+            margin-top: 5px;
+        }
+        .rank-status {
+            background: #e9e6e2;
+            padding: 8px 16px;
+            border-radius: 60px;
+            display: inline-block;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+        .matchup-area {
+            background: white;
+            border-radius: 48px;
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.2);
+            padding: 20px 15px 30px 15px;
+            margin-bottom: 30px;
+        }
+        .vs-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 25px;
+        }
+        .card {
+            flex: 1;
+            min-width: 240px;
+            background: #fefcf9;
+            border-radius: 36px;
+            padding: 28px 12px 28px 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid #e2ddd6;
+            box-shadow: 0 6px 0 #ddd8d0;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            background: #fffaf2;
+            border-color: #cbc3b8;
+        }
+        .card:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #ddd8d0;
+        }
+        .item-name {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 15px 0 8px;
+            word-break: break-word;
+        }
+        .vs-badge {
+            font-size: 2rem;
+            font-weight: 800;
+            background: #2c2a27;
+            color: white;
+            width: 70px;
+            height: 70px;
+            border-radius: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            align-self: center;
+            margin: 10px 0;
+        }
+        .button-bar {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 25px;
+        }
+        button {
+            background: #1e1b18;
+            border: none;
+            color: white;
+            font-size: 1rem;
+            padding: 10px 24px;
+            border-radius: 60px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: 0.1s linear;
+        }
+        button:active { transform: scale(0.97); }
+        .results-section {
+            background: #fff;
+            border-radius: 36px;
+            padding: 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+        }
+        .rank-list {
+            list-style: none;
+            padding: 0;
+        }
+        .rank-list li {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px;
+            border-bottom: 1px solid #ece7e1;
+            font-size: 1.2rem;
+        }
+        .rank-number {
+            font-weight: bold;
+            background: #e6e0d8;
+            width: 34px;
+            height: 34px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 34px;
+        }
+        .score-badge {
+            margin-left: auto;
+            font-family: monospace;
+            background: #f0ede8;
+            padding: 4px 12px;
+            border-radius: 60px;
+            font-size: 0.8rem;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-style: italic;
+        }
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 0.75rem;
+            color: #777;
+        }
+        @media (max-width: 700px) {
+            .item-name { font-size: 1.3rem; }
+            .card { padding: 18px 8px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>📊 Group Priority Ranker</h1>
+        <div class="sub">Pick the item that matters MORE to the group</div>
+        <div class="rank-status" id="voteCountDisplay">— votes recorded</div>
+    </div>
+
+    <div class="matchup-area" id="matchupArea">
+        <div class="vs-container" id="vsContainer">
+            <!-- dynamic cards -->
+        </div>
+        <div class="button-bar">
+            <button id="resultsBtn">📈 View Ranking & Results</button>
+        </div>
+    </div>
+
+    <div class="results-section" id="resultsPanel" style="display: none;">
+        <h3>🏆 Current Group Priority Ranking</h3>
+        <div id="resultsList" class="rank-list">Loading ranking...</div>
+        <div style="margin-top: 20px; text-align: right;">
+            <button id="closeResults">← Back to voting</button>
+        </div>
+    </div>
+    <footer>Every vote updates the Elo ranking. More votes = more stable priority.</footer>
+</div>
+
+<script>
+    // ---------- CONFIG ----------
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxWt_lRSjk7t9pJVNVgJ5sUzDXhH3Kwzs_0qDiraXjuc-7d-_aWnBnc3bhRbCeIL1Tz/exec";  // <--- PASTE YOUR GOOGLE APPS SCRIPT URL HERE
+
+    // ---------- GLOBALS ----------
+    let allItems = [];          // [{ id, name, elo:1500 }]
+    let currentPair = { a: null, b: null };
+    let sessionId = localStorage.getItem("ranker_session");
+    if (!sessionId) {
+        sessionId = "sess_" + Date.now() + "_" + Math.random().toString(36).substr(2, 8);
+        localStorage.setItem("ranker_session", sessionId);
+    }
+    let totalVotes = 0;        // not critical, just display
+
+    // Elo constants
+    const K_FACTOR = 32;
+    const DEFAULT_ELO = 1500;
+
+    // ---------- HELPER: Load items from Sheets ----------
+    async function fetchItems() {
+        try {
+            const url = `${SCRIPT_URL}?action=getItems`;
+            const resp = await fetch(url);
+            const items = await resp.json();
+            if (!items || items.length < 2) throw new Error("Need at least 2 items in the Items sheet");
+            // attach local Elo (load from localStorage if exists)
+            let storedRatings = {};
+            try {
+                storedRatings = JSON.parse(localStorage.getItem("item_elos") || "{}");
+            } catch(e) {}
+            allItems = items.map(it => ({
+                id: it.id,
+                name: it.name,
+                elo: storedRatings[it.id] || DEFAULT_ELO
+            }));
+            // ensure we update after votes too
+            return true;
+        } catch (err) {
+            console.error(err);
+            document.getElementById("vsContainer").innerHTML = `<div class="loading">⚠️ Failed to load items. Check Apps Script URL and CORS. Ensure sheet is shared.</div>`;
+            return false;
+        }
+    }
+
+    // persist Elo to localStorage (and later we'll recalc after each vote)
+    function persistElos() {
+        let obj = {};
+        allItems.forEach(it => { obj[it.id] = it.elo; });
+        localStorage.setItem("item_elos", JSON.stringify(obj));
+    }
+
+    // get two distinct random items (priority to less compared ones but simple random weighted by low comparison count? we'll do random selection but avoid same pair repeat too much)
+    function getRandomPair() {
+        if (allItems.length < 2) return null;
+        let idxA = Math.floor(Math.random() * allItems.length);
+        let idxB = Math.floor(Math.random() * allItems.length);
+        while (idxA === idxB) {
+            idxB = Math.floor(Math.random() * allItems.length);
+        }
+        return { a: allItems[idxA], b: allItems[idxB] };
+    }
+
+    function renderMatchup() {
+        const container = document.getElementById("vsContainer");
+        if (!currentPair.a || !currentPair.b) {
+            container.innerHTML = "<div class='loading'>Preparing next matchup...</div>";
+            return;
+        }
+        container.innerHTML = `
+            <div class="card" data-choice="${currentPair.a.id}">
+                <div style="font-size: 2rem;">🧩</div>
+                <div class="item-name">${escapeHtml(currentPair.a.name)}</div>
+                <div style="font-size:0.8rem; margin-top:12px;">⭐ more important</div>
+            </div>
+            <div class="vs-badge">VS</div>
+            <div class="card" data-choice="${currentPair.b.id}">
+                <div style="font-size: 2rem;">⚖️</div>
+                <div class="item-name">${escapeHtml(currentPair.b.name)}</div>
+                <div style="font-size:0.8rem; margin-top:12px;">⭐ more important</div>
+            </div>
+        `;
+        // attach event listeners
+        document.querySelectorAll('.card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                const chosenId = parseInt(card.dataset.choice);
+                recordVote(chosenId);
+            });
+        });
+    }
+
+    async function recordVote(winnerId) {
+        const winner = allItems.find(i => i.id === winnerId);
+        const loser = (currentPair.a.id === winnerId) ? currentPair.b : currentPair.a;
+        if (!winner || !loser) return;
+
+        // update Elo locally first
+        const expectedWinner = 1 / (1 + Math.pow(10, (loser.elo - winner.elo) / 400));
+        const expectedLoser = 1 / (1 + Math.pow(10, (winner.elo - loser.elo) / 400));
+        winner.elo = winner.elo + K_FACTOR * (1 - expectedWinner);
+        loser.elo = loser.elo + K_FACTOR * (0 - expectedLoser);
+        persistElos();
+
+        // send to Google Sheets
+        try {
+            const params = new URLSearchParams();
+            params.append("action", "saveVote");
+            params.append("winnerId", winner.id);
+            params.append("loserId", loser.id);
+            params.append("sessionId", sessionId);
+            await fetch(`${SCRIPT_URL}?${params.toString()}`);
+            totalVotes++;
+            document.getElementById("voteCountDisplay").innerText = `✓ ${totalVotes} votes recorded`;
+        } catch(err) {
+            console.warn("Vote not saved to sheet, but local ranking updated:", err);
+        }
+
+        // Next matchup
+        currentPair = getRandomPair();
+        renderMatchup();
+        updateRankingDisplay(); // optional show updated ranking realtime but we keep panel hidden
+    }
+
+    function updateRankingDisplay() {
+        const sorted = [...allItems].sort((a,b) => b.elo - a.elo);
+        const listDiv = document.getElementById("resultsList");
+        if (!listDiv) return;
+        listDiv.innerHTML = sorted.map((item, idx) => `
+            <li>
+                <span class="rank-number">${idx+1}</span>
+                <strong>${escapeHtml(item.name)}</strong>
+                <span class="score-badge">priority score ${Math.round(item.elo)}</span>
+            </li>
+        `).join('');
+    }
+
+    function showResults() {
+        updateRankingDisplay();
+        document.getElementById("matchupArea").style.display = "none";
+        document.getElementById("resultsPanel").style.display = "block";
+    }
+
+    function hideResults() {
+        document.getElementById("matchupArea").style.display = "block";
+        document.getElementById("resultsPanel").style.display = "none";
+        // refresh a fresh pair
+        currentPair = getRandomPair();
+        renderMatchup();
+    }
+
+    function escapeHtml(str) {
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    async function init() {
+        const success = await fetchItems();
+        if (!success) return;
+        currentPair = getRandomPair();
+        renderMatchup();
+        document.getElementById("resultsBtn").addEventListener("click", showResults);
+        document.getElementById("closeResults").addEventListener("click", hideResults);
+        document.getElementById("voteCountDisplay").innerText = `Ready — pick your priority`;
+        updateRankingDisplay();
+    }
+
+    init();
+</script>
+</body>
+</html>
