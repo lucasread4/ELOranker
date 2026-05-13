@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Group Priority Ranker</title>
+    <title>Group Priority Ranker - Google Sheets</title>
     <style>
         * {
             box-sizing: border-box;
@@ -116,6 +116,10 @@
             transition: 0.1s linear;
         }
         button:active { transform: scale(0.97); }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
         .results-section {
             background: #fff;
             border-radius: 36px;
@@ -157,6 +161,13 @@
             padding: 40px;
             font-style: italic;
         }
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #d32f2f;
+            background: #ffebee;
+            border-radius: 24px;
+        }
         footer {
             text-align: center;
             margin-top: 40px;
@@ -169,6 +180,14 @@
             text-align: center;
             color: #666;
         }
+        .config-warning {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 12px 20px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+        }
         @media (max-width: 700px) {
             .item-name { font-size: 1.3rem; }
             .card { padding: 18px 8px; }
@@ -180,15 +199,15 @@
     <div class="header">
         <h1>📊 Group Priority Ranker</h1>
         <div class="sub">Click the item that matters MORE to the group</div>
-        <div class="rank-status" id="voteCountDisplay">Ready to rank!</div>
+        <div class="rank-status" id="statusDisplay">Connecting to Google Sheets...</div>
     </div>
 
     <div class="matchup-area" id="matchupArea">
         <div class="vs-container" id="vsContainer">
-            <div class="loading">Loading items...</div>
+            <div class="loading">Loading items from Google Sheets...</div>
         </div>
         <div class="button-bar">
-            <button id="resultsBtn">📈 View Ranking & Results</button>
+            <button id="resultsBtn" disabled>📈 View Ranking & Results</button>
         </div>
         <div class="vote-counter" id="voteCounter"></div>
     </div>
@@ -200,28 +219,21 @@
             <button id="closeResults">← Back to voting</button>
         </div>
     </div>
-    <footer>Every vote updates the ranking. Higher score = higher priority to the group.</footer>
+    <footer>Every vote saves to Google Sheets. Higher score = higher priority to the group.</footer>
 </div>
 
 <script>
-    // DEFAULT ITEMS (works without Google Sheets)
-    const DEFAULT_ITEMS = [
-        { id: "1", name: "✅ Fast loading speed" },
-        { id: "2", name: "🎨 Beautiful design" },
-        { id: "3", name: "📱 Mobile friendly" },
-        { id: "4", name: "🔒 Security features" },
-        { id: "5", name: "📊 Analytics dashboard" },
-        { id: "6", name: "💬 User support chat" }
-    ];
-    
-    // CONFIG - Add your Google Sheets URL here if desired
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbygtRKNugzWk7F5M28Uy-6xZKyA5vuAK901o2ZnJaReXGrV1BGLeP9CWAdAavBWi36g/exec";  // Leave empty to use default items
+    // ========== CONFIGURATION ==========
+    // REPLACE THIS URL WITH YOUR GOOGLE APPS SCRIPT WEB APP URL
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbygtRKNugzWk7F5M28Uy-6xZKyA5vuAK901o2ZnJaReXGrV1BGLeP9CWAdAavBWi36g/exec";
+    // ====================================
     
     // GLOBALS
     let allItems = [];
     let currentPair = { a: null, b: null };
     let sessionId = localStorage.getItem("ranker_session");
     let totalVotes = 0;
+    let isLoading = true;
     
     if (!sessionId) {
         sessionId = "sess_" + Date.now() + "_" + Math.random().toString(36).substr(2, 8);
@@ -232,25 +244,114 @@
     const K_FACTOR = 32;
     const DEFAULT_ELO = 1500;
     
-    // Load items from localStorage or defaults
-    function loadItems() {
-        let storedRatings = {};
-        try {
-            storedRatings = JSON.parse(localStorage.getItem("item_elos") || "{}");
-        } catch(e) {}
+    // Helper: Update status display
+    function updateStatus(message, isError = false) {
+        const statusDiv = document.getElementById("statusDisplay");
+        if (statusDiv) {
+            statusDiv.innerHTML = message;
+            statusDiv.style.background = isError ? "#ffebee" : "#e9e6e2";
+            statusDiv.style.color = isError ? "#c62828" : "inherit";
+        }
+    }
+    
+    // Load items from Google Sheets
+    async function fetchItemsFromSheets() {
+        if (!SCRIPT_URL || SCRIPT_URL === "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE") {
+            updateStatus("⚠️ Please configure SCRIPT_URL in the code", true);
+            document.getElementById("vsContainer").innerHTML = `
+                <div class="error">
+                    <strong>Configuration Error</strong><br><br>
+                    Please set your Google Apps Script URL in the <code>SCRIPT_URL</code> variable.<br><br>
+                    <small>Line ~100 in the HTML file</small>
+                </div>
+            `;
+            return false;
+        }
         
-        // Use default items if no Google Sheets URL
-        if (!SCRIPT_URL) {
-            allItems = DEFAULT_ITEMS.map(it => ({
-                id: it.id,
+        try {
+            updateStatus("📡 Fetching items from Google Sheets...");
+            const url = `${SCRIPT_URL}?action=getItems&t=${Date.now()}`;
+            const resp = await fetch(url);
+            
+            if (!resp.ok) {
+                throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+            }
+            
+            const items = await resp.json();
+            
+            // Check for error response
+            if (items.error) {
+                throw new Error(items.error);
+            }
+            
+            if (!items || items.length === 0) {
+                throw new Error("No items found in the 'Items' sheet");
+            }
+            
+            if (items.length < 2) {
+                throw new Error("Need at least 2 items to rank. Add more rows to your 'Items' sheet.");
+            }
+            
+            // Load stored Elo ratings from localStorage
+            let storedRatings = {};
+            try {
+                storedRatings = JSON.parse(localStorage.getItem("item_elos") || "{}");
+            } catch(e) {}
+            
+            allItems = items.map(it => ({
+                id: String(it.id),
                 name: it.name,
                 elo: storedRatings[it.id] || DEFAULT_ELO
             }));
+            
+            updateStatus(`✓ Loaded ${allItems.length} items from Google Sheets`);
             return true;
+            
+        } catch (err) {
+            console.error("Fetch error:", err);
+            updateStatus(`❌ Error: ${err.message}`, true);
+            document.getElementById("vsContainer").innerHTML = `
+                <div class="error">
+                    <strong>Failed to load from Google Sheets</strong><br><br>
+                    ${escapeHtml(err.message)}<br><br>
+                    <small>Check:<br>
+                    1. Apps Script is deployed as Web App<br>
+                    2. Execute as "Me", Access "Anyone"<br>
+                    3. SCRIPT_URL is correct<br>
+                    4. Sheet named "Items" exists with columns: id, name</small>
+                </div>
+            `;
+            return false;
+        }
+    }
+    
+    // Save vote to Google Sheets
+    async function saveVoteToSheets(winnerId, loserId) {
+        if (!SCRIPT_URL || SCRIPT_URL === "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE") {
+            console.warn("No SCRIPT_URL configured, vote not saved");
+            return false;
         }
         
-        // Otherwise try to load from Sheets (but default works immediately)
-        return false;
+        try {
+            const params = new URLSearchParams();
+            params.append("action", "saveVote");
+            params.append("winnerId", winnerId);
+            params.append("loserId", loserId);
+            params.append("sessionId", sessionId);
+            
+            const response = await fetch(`${SCRIPT_URL}?${params.toString()}`);
+            const result = await response.json();
+            
+            if (result.status === "success") {
+                return true;
+            } else {
+                console.warn("Sheet save returned error:", result.error);
+                return false;
+            }
+        } catch (err) {
+            console.warn("Could not save vote to Google Sheets:", err);
+            return false;
+        }
     }
     
     // Persist Elo to localStorage
@@ -264,7 +365,6 @@
     function getRandomPair() {
         if (!allItems || allItems.length < 2) return null;
         
-        // Get indices ensuring they're different
         let idxA = Math.floor(Math.random() * allItems.length);
         let idxB = Math.floor(Math.random() * allItems.length);
         while (idxA === idxB && allItems.length > 1) {
@@ -299,7 +399,10 @@
     
     // Record a vote and update Elo ratings
     async function recordVote(winnerId) {
-        console.log("Vote recorded for:", winnerId);
+        if (isLoading) {
+            console.log("Still loading, please wait");
+            return;
+        }
         
         const winner = allItems.find(i => i.id === winnerId);
         const loser = (currentPair.a.id === winnerId) ? currentPair.b : currentPair.a;
@@ -308,8 +411,6 @@
             console.error("Could not find winner or loser");
             return;
         }
-        
-        console.log(`Vote: ${winner.name} beats ${loser.name}`);
         
         // Calculate Elo changes
         const expectedWinner = 1 / (1 + Math.pow(10, (loser.elo - winner.elo) / 400));
@@ -321,11 +422,21 @@
         persistElos();
         totalVotes++;
         
-        // Update display
+        // Update vote counter display
         const voteCounter = document.getElementById("voteCounter");
         if (voteCounter) {
-            voteCounter.innerHTML = `📊 ${totalVotes} vote${totalVotes !== 1 ? 's' : ''} recorded`;
+            voteCounter.innerHTML = `📊 ${totalVotes} vote${totalVotes !== 1 ? 's' : ''} recorded locally`;
         }
+        
+        // Save to Google Sheets (don't await - fire and forget for speed)
+        saveVoteToSheets(winner.id, loser.id).then(success => {
+            if (success && voteCounter) {
+                voteCounter.innerHTML = `📊 ${totalVotes} vote${totalVotes !== 1 ? 's' : ''} saved to sheet`;
+                setTimeout(() => {
+                    if (voteCounter) voteCounter.innerHTML = `📊 ${totalVotes} vote${totalVotes !== 1 ? 's' : ''} recorded`;
+                }, 2000);
+            }
+        });
         
         // Get next pair
         currentPair = getRandomPair();
@@ -359,9 +470,9 @@
     function hideResults() {
         document.getElementById("matchupArea").style.display = "block";
         document.getElementById("resultsPanel").style.display = "none";
-        // Refresh to a new pair
-        currentPair = getRandomPair();
-        renderMatchup();
+        if (currentPair) {
+            renderMatchup();
+        }
     }
     
     // Escape HTML
@@ -375,46 +486,35 @@
         });
     }
     
-    // Reset all rankings (admin function)
-    function resetRankings() {
-        if (confirm("Reset all rankings? This cannot be undone.")) {
-            localStorage.removeItem("item_elos");
-            loadItems();
-            persistElos();
-            totalVotes = 0;
-            currentPair = getRandomPair();
-            renderMatchup();
-            updateRankingDisplay();
-            document.getElementById("voteCounter").innerHTML = "";
-            alert("Rankings have been reset!");
-        }
-    }
-    
     // Initialize the app
-    function init() {
-        console.log("Initializing ranker...");
+    async function init() {
+        console.log("Initializing Google Sheets ranker...");
         
-        // Load items
-        loadItems();
+        // Load items from Sheets
+        const success = await fetchItemsFromSheets();
         
-        if (allItems.length === 0) {
-            console.error("No items loaded!");
-            document.getElementById("vsContainer").innerHTML = "<div class='loading'>Error: No items found. Please check configuration.</div>";
+        if (!success || allItems.length < 2) {
+            isLoading = false;
             return;
         }
         
-        console.log(`Loaded ${allItems.length} items:`, allItems.map(i => i.name));
+        isLoading = false;
         
         // Get first random pair
         currentPair = getRandomPair();
         renderMatchup();
         
+        // Enable the results button
+        const resultsBtn = document.getElementById("resultsBtn");
+        if (resultsBtn) {
+            resultsBtn.disabled = false;
+        }
+        
         // Set up event delegation for clicks on cards
         const container = document.getElementById("vsContainer");
         container.addEventListener('click', function(e) {
             const card = e.target.closest('.card');
-            if (card && card.dataset.choice) {
-                console.log("Card clicked, choice:", card.dataset.choice);
+            if (card && card.dataset.choice && !isLoading) {
                 const chosenId = card.dataset.choice;
                 recordVote(chosenId);
             }
@@ -424,25 +524,18 @@
         document.getElementById("resultsBtn").addEventListener("click", showResults);
         document.getElementById("closeResults").addEventListener("click", hideResults);
         
-        // Add reset button (optional - uncomment to add)
-        // const resetBtn = document.createElement("button");
-        // resetBtn.textContent = "🔄 Reset Rankings";
-        // resetBtn.style.marginLeft = "10px";
-        // resetBtn.onclick = resetRankings;
-        // document.querySelector(".button-bar").appendChild(resetBtn);
-        
-        // Update vote counter display
-        const savedVotes = localStorage.getItem("total_votes");
+        // Load previous vote count from localStorage
+        const savedVotes = localStorage.getItem("total_votes_gs");
         if (savedVotes) totalVotes = parseInt(savedVotes);
-        
-        document.getElementById("voteCountDisplay").innerText = `${allItems.length} items ready to rank!`;
         
         console.log("Initialization complete!");
     }
     
-    // Save vote count occasionally
+    // Save vote count periodically
     setInterval(() => {
-        localStorage.setItem("total_votes", totalVotes);
+        if (totalVotes > 0) {
+            localStorage.setItem("total_votes_gs", totalVotes);
+        }
     }, 5000);
     
     // Start the app
