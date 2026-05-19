@@ -248,7 +248,7 @@
 
 <script>
     // ========== CONFIGURATION ==========
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyYVJJiz_Ad4VIuQXyV13CHZYU24xsW9sVRz5Dz12ODXIs7tcqgCcdRswxp1SIFbqJi/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz2pUAJJiR5eFBbz-VLkKksOHXImVqSGIXMUbOT8ajq4htwFLKLHOGpoR23AxnU5qU6/exec";
     // ====================================
     
     // GLOBALS
@@ -343,11 +343,12 @@
                 storedRatings = JSON.parse(localStorage.getItem("item_elos") || "{}");
             } catch(e) {}
             
-            allItems = items.map(it => ({
-                id: String(it.id),
-                name: it.name,
-                elo: storedRatings[it.id] || DEFAULT_ELO
-            }));
+           allItems = items.map(it => ({
+    id: String(it.id),
+    name: it.name,
+    imageUrl: it.imageUrl || null,  // Add this line
+    elo: storedRatings[it.id] || DEFAULT_ELO
+}));
             
             // Generate all possible pairs
             const allPairs = generateAllPairs(allItems);
@@ -459,25 +460,31 @@
     }
     
     // Render the two cards
-    function renderMatchup() {
-        const container = document.getElementById("vsContainer");
-        if (!currentPair) {
-            container.innerHTML = "<div class='loading'>Loading...</div>";
-            return;
-        }
-        
-        container.innerHTML = `
-            <div class="card" data-choice="${currentPair.a.id}">
-                <div style="font-size: 2rem;">🔹</div>
-                <div class="item-name">${escapeHtml(currentPair.a.name)}</div>
-                <div style="font-size:0.8rem; margin-top:12px; color:#2c7a4d;">← MORE IMPORTANT</div>
-            </div>
-            <div class="vs-badge">VS</div>
-            <div class="card" data-choice="${currentPair.b.id}">
-                <div style="font-size: 2rem;">🔸</div>
-                <div class="item-name">${escapeHtml(currentPair.b.name)}</div>
-                <div style="font-size:0.8rem; margin-top:12px; color:#2c7a4d;">MORE IMPORTANT →</div>
-            </div>
+   function renderMatchup() {
+    const container = document.getElementById("vsContainer");
+    if (!currentPair) {
+        container.innerHTML = "<div class='loading'>Loading...</div>";
+        return;
+    }
+    
+    container.innerHTML = `
+        <div class="card" data-choice="${currentPair.a.id}">
+            <img src="${currentPair.a.imageUrl || 'https://via.placeholder.com/150?text=No+Image'}" 
+                 style="width: 120px; height: 120px; object-fit: cover; border-radius: 16px; margin-bottom: 12px;"
+                 onerror="this.src='https://via.placeholder.com/150?text=Image+Not+Found'">
+            <div class="item-name">${escapeHtml(currentPair.a.name)}</div>
+            <div style="font-size:0.8rem; margin-top:12px; color:#2c7a4d;">← MORE IMPORTANT</div>
+        </div>
+        <div class="vs-badge">VS</div>
+        <div class="card" data-choice="${currentPair.b.id}">
+            <img src="${currentPair.b.imageUrl || 'https://via.placeholder.com/150?text=No+Image'}" 
+                 style="width: 120px; height: 120px; object-fit: cover; border-radius: 16px; margin-bottom: 12px;"
+                 onerror="this.src='https://via.placeholder.com/150?text=Image+Not+Found'">
+            <div class="item-name">${escapeHtml(currentPair.b.name)}</div>
+            <div style="font-size:0.8rem; margin-top:12px; color:#2c7a4d;">MORE IMPORTANT →</div>
+        </div>
+    `;
+}
         `;
     }
     
