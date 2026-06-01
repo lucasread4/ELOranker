@@ -425,12 +425,37 @@ function loadStoredElos() {
 }
 
 // ─────────────────────────────────────────────
+//  JSONP helper — bypasses CORS on Apps Script
+// ─────────────────────────────────────────────
+function jsonp(url) {
+    return new Promise((resolve, reject) => {
+        const cbName = "_cb_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7);
+        const script = document.createElement("script");
+        const timer  = setTimeout(() => {
+            cleanup();
+            reject(new Error("Request timed out"));
+        }, 10000);
+
+        window[cbName] = data => { cleanup(); resolve(data); };
+
+        function cleanup() {
+            clearTimeout(timer);
+            delete window[cbName];
+            if (script.parentNode) script.parentNode.removeChild(script);
+        }
+
+        script.onerror = () => { cleanup(); reject(new Error("Script load failed")); };
+        script.src = url + (url.includes("?") ? "&" : "?") + "callback=" + cbName;
+        document.head.appendChild(script);
+    });
+}
+
+// ─────────────────────────────────────────────
 //  Fetch items from Google Sheets
 // ─────────────────────────────────────────────
 async function fetchItems() {
     try {
-        const resp  = await fetch(`${SCRIPT_URL}?action=getItems`);
-        const items = await resp.json();
+        const items = await jsonp(`${SCRIPT_URL}?action=getItems`);
 
         if (items.error) throw new Error(items.error);
         if (!Array.isArray(items) || items.length < 2)
@@ -438,7 +463,7 @@ async function fetchItems() {
 
         const stored = loadStoredElos();
         allItems = items.map(it => ({
-            id:       String(it.id),      // always strings — avoids type mismatch
+            id:       String(it.id),
             name:     String(it.name),
             imageURL: String(it.imageURL || ""),
             elo:      stored[String(it.id)] ?? DEFAULT_ELO
@@ -454,7 +479,8 @@ async function fetchItems() {
                 <div style="margin-top:12px; font-size:0.85rem; line-height:1.7; color:#9a9087;">
                     1. Deploy Apps Script as a Web App<br>
                     2. Execute as <em>Me</em>, access <em>Anyone</em><br>
-                    3. Paste the correct URL into SCRIPT_URL
+                    3. Paste the correct URL into SCRIPT_URL<br>
+                    4. Make sure your doGet() wraps the response in the callback parameter
                 </div>
             </div>`;
         setStatus("Connection error", "");
@@ -561,8 +587,7 @@ async function recordVote(winnerId) {
         sessionId
     });
 
-    fetch(`${SCRIPT_URL}?${params}`)
-        .then(r => r.json())
+    jsonp(`${SCRIPT_URL}?${params}`)
         .then(res => {
             if (res.status === "success") {
                 setStatus(`${totalVotes} vote${totalVotes !== 1 ? "s" : ""} recorded`, "ok");
