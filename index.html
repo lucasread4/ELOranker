@@ -138,6 +138,15 @@
             100% { transform: scale(1); }
         }
 
+        .card-img {
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            object-fit: cover;
+            border-radius: 12px;
+            margin-bottom: 14px;
+            background: var(--border);
+            display: block;
+        }
         .card-rank-hint {
             font-size: 0.7rem;
             font-weight: 600;
@@ -429,9 +438,10 @@ async function fetchItems() {
 
         const stored = loadStoredElos();
         allItems = items.map(it => ({
-            id:   String(it.id),          // always strings — avoids type mismatch
-            name: String(it.name),
-            elo:  stored[String(it.id)] ?? DEFAULT_ELO
+            id:       String(it.id),      // always strings — avoids type mismatch
+            name:     String(it.name),
+            imageURL: String(it.imageURL || ""),
+            elo:      stored[String(it.id)] ?? DEFAULT_ELO
         }));
 
         return true;
@@ -473,14 +483,18 @@ function renderMatchup() {
         return;
     }
     const { a, b } = currentPair;
+    const imgA = a.imageURL ? `<img class="card-img" src="${esc(a.imageURL)}" alt="${esc(a.name)}" draggable="false">` : "";
+    const imgB = b.imageURL ? `<img class="card-img" src="${esc(b.imageURL)}" alt="${esc(b.name)}" draggable="false">` : "";
     c.innerHTML = `
         <div class="choice-card" data-choice="${esc(a.id)}">
+            ${imgA}
             <div class="card-rank-hint">Option A</div>
             <div class="card-name">${esc(a.name)}</div>
             <div class="card-elo">Elo ${Math.round(a.elo)}</div>
         </div>
         <div class="vs-divider"><div class="vs-circle">VS</div></div>
         <div class="choice-card" data-choice="${esc(b.id)}">
+            ${imgB}
             <div class="card-rank-hint">Option B</div>
             <div class="card-name">${esc(b.name)}</div>
             <div class="card-elo">Elo ${Math.round(b.elo)}</div>
@@ -499,9 +513,11 @@ function updateRankingDisplay() {
     const list = document.getElementById("rankList");
     list.innerHTML = sorted.map((item, i) => {
         const pct = Math.round(((item.elo - minElo) / eloRange) * 100);
+        const thumb = item.imageURL ? `<img src="${esc(item.imageURL)}" alt="" style="width:36px;height:36px;object-fit:cover;border-radius:8px;flex-shrink:0;">` : "";
         return `
             <li class="rank-item">
                 <span class="rank-num">${i + 1}</span>
+                ${thumb}
                 <span class="rank-name">${esc(item.name)}</span>
                 <div class="rank-bar-wrap">
                     <div class="rank-bar" style="width:${pct}%"></div>
