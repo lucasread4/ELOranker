@@ -369,7 +369,7 @@
 // ─────────────────────────────────────────────
 //  CONFIG — paste your Apps Script URL here
 // ─────────────────────────────────────────────
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbypt-e4Gpn8qM7sfhtGLUJBYRRmFblKhqZ9rqQAzbQmp9dtcLW4e5nUvGttmd-hrR27/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz3NxacUlJG-AW9RZUq09yzfjtOC_foMm_pLlrTzB4vi8e5_GuAeOb2I8GApcHpaYxE/exec";
 // ─────────────────────────────────────────────
 //  Elo settings
 // ─────────────────────────────────────────────
@@ -453,22 +453,28 @@ function jsonp(url) {
 // ─────────────────────────────────────────────
 //  Fetch items from Google Sheets
 // ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
+//  Fetch items with GLOBAL Elo scores
+// ─────────────────────────────────────────────
 async function fetchItems() {
     try {
         const items = await jsonp(`${SCRIPT_URL}?action=getItems`);
-
+        
         if (items.error) throw new Error(items.error);
         if (!Array.isArray(items) || items.length < 2)
             throw new Error("Need at least 2 items in the Items sheet.");
-
-        const stored = loadStoredElos();
+        
+        // Use the Elo scores from the server (global rankings)
         allItems = items.map(it => ({
             id:       String(it.id),
             name:     String(it.name),
             imageURL: String(it.imageURL || ""),
-            elo:      stored[String(it.id)] ?? DEFAULT_ELO
+            elo:      it.elo  // ← Now using global Elo from server!
         }));
-
+        
+        // Also store a local backup
+        persistElos();
+        
         return true;
     } catch (err) {
         console.error(err);
@@ -479,13 +485,74 @@ async function fetchItems() {
                 <div style="margin-top:12px; font-size:0.85rem; line-height:1.7; color:#9a9087;">
                     1. Deploy Apps Script as a Web App<br>
                     2. Execute as <em>Me</em>, access <em>Anyone</em><br>
-                    3. Paste the correct URL into SCRIPT_URL<br>
-                    4. Make sure your doGet() wraps the response in the callback parameter
+                    3. Paste the correct URL into SCRIPT_URL
                 </div>
             </div>`;
         setStatus("Connection error", "");
         return false;
     }
+}
+
+// ─────────────────────────────────────────────
+//  Record a vote (updates GLOBAL rankings)
+// ─────────────────────────────────────────────
+async function recordVote(winnerId) {
+    if (locked) return;
+    locked = true;
+
+    const winner = allItems.find(i => i.id === winnerId);
+    const loser  = currentPair.a.id === winnerId ? currentPair.b : currentPair.a;
+    if (!winner || !loser) { locked = false; return; }
+
+    // ── Show animation immediately ──
+    const cards = document.querySelectorAll(".choice-card");
+    cards.forEach(card => {
+        if (card.dataset.choice === winnerId) card.classList.add("voted-winner");
+        else                                  card.classList.add("voted-loser");
+    });
+
+    // ── Send vote to server (updates global rankings) ──
+    const params = new URLSearchParams({
+        action:    "saveVote",
+        winnerId:  winner.id,
+        loserId:   loser.id,
+        sessionId: sessionId
+    });
+
+    try {
+        const result = await jsonp(`${SCRIPT_URL}?${params}`);
+        
+        if (result.status === "success") {
+            // Update local Elo scores with server's calculated values
+            winner.elo = result.newWinnerElo;
+            loser.elo = result.newLoserElo;
+            persistElos();
+            totalVotes++;
+            setStatus(`${totalVotes} vote${totalVotes !== 1 ? "s" : ""} recorded (global)`, "ok");
+        } else {
+            throw new Error(result.error || "Unknown error");
+        }
+    } catch (err) {
+        console.warn("Failed to save vote to server:", err);
+        setStatus("Offline — vote saved locally only", "offline");
+        
+        // Fallback: local Elo update
+        const expWin  = 1 / (1 + Math.pow(10, (loser.elo - winner.elo) / 400));
+        winner.elo += K_FACTOR * (1 - expWin);
+        loser.elo  += K_FACTOR * (0 - expWin);
+        persistElos();
+        totalVotes++;
+    }
+
+    // ── Next matchup after animation delay ──
+    setTimeout(async () => {
+        // Refresh all items to get latest global rankings
+        await fetchItems();
+        currentPair = getRandomPair();
+        renderMatchup();
+        updateRankingDisplay();
+        locked = false;
+    }, 320);
 }
 
 // ─────────────────────────────────────────────
