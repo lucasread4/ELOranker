@@ -116,8 +116,8 @@
         .choice-card:hover {
             transform: translateY(-5px);
             border-color: var(--accent);
-            background: #fff;
-            box-shadow: 0 8px 24px rgba(200,73,10,0.12);
+            background: #1a1a1a;
+            box-shadow: 0 8px 24px rgba(158,42,47,0.2);
         }
         .choice-card:active {
             transform: translateY(1px) scale(0.98);
@@ -125,7 +125,7 @@
         }
         .choice-card.voted-winner {
             border-color: #5cad6b;
-            background: #f2faf3;
+            background: #1a2a1a;
             animation: winPulse 0.4s ease;
         }
         .choice-card.voted-loser {
@@ -138,9 +138,10 @@
             100% { transform: scale(1); }
         }
 
+        /* FIXED: Vertical rectangle images (portrait 3:4 aspect ratio) */
         .card-img {
             width: 100%;
-            aspect-ratio: 3 / 4;
+            aspect-ratio: 3 / 4;     /* Vertical rectangle — portrait orientation */
             object-fit: cover;
             border-radius: 12px;
             margin-bottom: 14px;
@@ -156,9 +157,9 @@
             margin-bottom: 10px;
         }
         .card-name {
-            font-family: 'DM Serif Display', serif;
+            font-family: 'Oswald', sans-serif;
             font-size: clamp(1.2rem, 3vw, 1.7rem);
-            font-weight: 400;
+            font-weight: 500;
             line-height: 1.25;
             word-break: break-word;
             color: var(--ink);
@@ -167,7 +168,7 @@
         .card-elo {
             font-size: 0.72rem;
             color: var(--ink3);
-            font-family: 'DM Sans', monospace;
+            font-family: 'Oswald', monospace;
         }
 
         /* VS divider */
@@ -184,8 +185,8 @@
             width: 44px;
             height: 44px;
             border-radius: 50%;
-            background: var(--ink);
-            color: #fff;
+            background: var(--gold);
+            color: #000;
             font-size: 0.75rem;
             font-weight: 700;
             letter-spacing: 0.05em;
@@ -207,7 +208,7 @@
             border: 1.5px solid var(--border);
             background: var(--card);
             color: var(--ink);
-            font-family: 'DM Sans', sans-serif;
+            font-family: 'Oswald', sans-serif;
             font-size: 0.88rem;
             font-weight: 500;
             padding: 9px 22px;
@@ -218,17 +219,17 @@
             align-items: center;
             gap: 6px;
         }
-        .btn:hover  { background: var(--accent2); border-color: var(--accent); }
+        .btn:hover  { background: var(--accent2); border-color: var(--accent); color: #000; }
         .btn:active { transform: scale(0.97); }
-        .btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
-        .btn.primary:hover { background: var(--accent); border-color: var(--accent); }
+        .btn.primary { background: var(--gold); color: #000; border-color: var(--gold); }
+        .btn.primary:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
 
         /* ── Results panel ── */
         #resultsPanel { display: none; }
         .results-title {
-            font-family: 'DM Serif Display', serif;
+            font-family: 'Oswald', sans-serif;
             font-size: 1.4rem;
-            font-weight: 400;
+            font-weight: 500;
             margin-bottom: 20px;
             display: flex;
             align-items: center;
@@ -250,7 +251,7 @@
             background: var(--paper);
             transition: background 0.15s;
         }
-        .rank-item:first-child { background: #fffbf0; border-color: var(--gold); }
+        .rank-item:first-child { background: #1a1a0a; border-color: var(--gold); }
         .rank-num {
             font-weight: 600;
             font-size: 0.8rem;
@@ -281,7 +282,7 @@
         }
         .rank-item:first-child .rank-bar { background: var(--gold); }
         .rank-elo {
-            font-family: 'DM Sans', monospace;
+            font-family: 'Oswald', monospace;
             font-size: 0.75rem;
             color: var(--ink3);
             width: 46px;
@@ -329,9 +330,9 @@
 <body>
 
 <div class="header">
-    <div class="eyebrow">Group Decision Tool</div>
-    <h1>Priority <em>Ranker</em></h1>
-    <div class="sub">Pick the option that matters more to your group</div>
+    <div class="eyebrow">5-Stripes Decision Tool</div>
+    <h1>ATL UTD <em>Kit Ranker</em></h1>
+    <div class="sub">Pick whichever kit you like best</div>
     <div class="pill" id="statusPill">
         <span class="pill-dot" id="statusDot"></span>
         <span id="statusText">Loading…</span>
@@ -343,7 +344,7 @@
     <div class="vs-row" id="vsContainer">
         <div class="loading-state">
             <div class="spinner"></div>
-            Fetching items from your sheet…
+            Loading kits from your sheet…
         </div>
     </div>
     <div class="action-bar">
@@ -354,15 +355,15 @@
 <!-- Results panel -->
 <div class="panel" id="resultsPanel">
     <div class="results-title">
-        &#x1F3C6; Current ranking
+        🏆 Final ranking
     </div>
     <ul class="rank-list" id="rankList"></ul>
     <div class="action-bar">
-        <button class="btn" id="backBtn">&#8592; Back to voting</button>
+        <button class="btn" id="backBtn">← Back to voting</button>
     </div>
 </div>
 
-<footer>Every vote updates the Elo score — more votes means a more stable ranking.</footer>
+<footer>Every vote updates the ranking — more votes = more accurate results.</footer>
 
 <script>
 // ─────────────────────────────────────────────
@@ -473,7 +474,7 @@ async function fetchItems() {
         console.error(err);
         document.getElementById("vsContainer").innerHTML = `
             <div class="loading-state">
-                <div style="font-size:1.6rem; margin-bottom:12px;">&#9888;&#65039;</div>
+                <div style="font-size:1.6rem; margin-bottom:12px;">⚠️</div>
                 <strong>${esc(err.message)}</strong>
                 <div style="margin-top:12px; font-size:0.85rem; line-height:1.7; color:#9a9087;">
                     1. Deploy Apps Script as a Web App<br>
@@ -508,8 +509,8 @@ function renderMatchup() {
         return;
     }
     const { a, b } = currentPair;
-    const imgA = a.imageURL ? `<img class="card-img" src="${esc(a.imageURL)}" alt="${esc(a.name)}" draggable="false">` : "";
-    const imgB = b.imageURL ? `<img class="card-img" src="${esc(b.imageURL)}" alt="${esc(b.name)}" draggable="false">` : "";
+    const imgA = a.imageURL ? `<img class="card-img" src="${esc(a.imageURL)}" alt="${esc(a.name)}" draggable="false" loading="lazy">` : `<div class="card-img" style="background: var(--border); display: flex; align-items: center; justify-content: center; color: var(--ink3); font-size: 0.8rem;">No image</div>`;
+    const imgB = b.imageURL ? `<img class="card-img" src="${esc(b.imageURL)}" alt="${esc(b.name)}" draggable="false" loading="lazy">` : `<div class="card-img" style="background: var(--border); display: flex; align-items: center; justify-content: center; color: var(--ink3); font-size: 0.8rem;">No image</div>`;
     c.innerHTML = `
         <div class="choice-card" data-choice="${esc(a.id)}">
             ${imgA}
@@ -538,7 +539,7 @@ function updateRankingDisplay() {
     const list = document.getElementById("rankList");
     list.innerHTML = sorted.map((item, i) => {
         const pct = Math.round(((item.elo - minElo) / eloRange) * 100);
-        const thumb = item.imageURL ? `<img src="${esc(item.imageURL)}" alt="" style="width:36px;height:36px;object-fit:cover;border-radius:8px;flex-shrink:0;">` : "";
+        const thumb = item.imageURL ? `<img src="${esc(item.imageURL)}" alt="" style="width:40px;height:53px;object-fit:cover;border-radius:8px;flex-shrink:0;">` : `<div style="width:40px;height:53px;background:var(--border);border-radius:8px;flex-shrink:0;"></div>`;
         return `
             <li class="rank-item">
                 <span class="rank-num">${i + 1}</span>
@@ -633,7 +634,7 @@ async function init() {
     currentPair = getRandomPair();
     renderMatchup();
     updateRankingDisplay();
-    setStatus("Ready — pick your priority", "ok");
+    setStatus("Ready — pick your favorite kit", "ok");
 
     // Single delegated listener on the container
     document.getElementById("vsContainer").addEventListener("click", e => {
