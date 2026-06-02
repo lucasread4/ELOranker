@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
     <title>ATL UTD KIT RANKER</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;700&display=swap" rel="stylesheet">
@@ -19,7 +19,7 @@
 --accent: #9E2A2F;        /* Atlanta United Red */
 --accent2:#FEBE10;        /* Atlanta United Gold */
 --gold:   #FEBE10;
---radius: 20px;
+--radius: 16px;
 --shadow: 0 2px 0 #9E2A2F;
         }
 
@@ -30,52 +30,52 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 40px 20px 60px;
+            padding: 16px 12px 40px;
             color: var(--ink);
         }
 
-        /* ── Header ── */
+        /* ── Header (compacted for mobile) ── */
         .header {
             text-align: center;
-            margin-bottom: 36px;
+            margin-bottom: 20px;
             animation: fadeUp 0.5s ease both;
         }
         .eyebrow {
-            font-size: 0.72rem;
+            font-size: 0.65rem;
             font-weight: 600;
-            letter-spacing: 0.14em;
+            letter-spacing: 0.12em;
             text-transform: uppercase;
             color: var(--accent);
-            margin-bottom: 10px;
+            margin-bottom: 6px;
         }
         h1 {
             font-family: 'Oswald', serif;
-            font-size: clamp(2rem, 5vw, 3rem);
-            font-weight: 400;
-            line-height: 1.1;
-            letter-spacing: -0.5px;
+            font-size: clamp(1.6rem, 5vw, 2.2rem);
+            font-weight: 500;
+            line-height: 1.2;
+            letter-spacing: -0.3px;
             color: var(--ink);
         }
         h1 em { font-style: italic; color: var(--accent); }
         .sub {
-            font-size: 0.95rem;
+            font-size: 0.75rem;
             color: var(--ink2);
-            margin-top: 10px;
+            margin-top: 6px;
         }
         .pill {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
             background: var(--card);
             border: 1px solid var(--border);
             color: var(--ink2);
-            font-size: 0.8rem;
-            padding: 5px 14px;
+            font-size: 0.7rem;
+            padding: 4px 12px;
             border-radius: 60px;
-            margin-top: 14px;
+            margin-top: 10px;
         }
         .pill-dot {
-            width: 7px; height: 7px;
+            width: 6px; height: 6px;
             border-radius: 50%;
             background: var(--accent);
             flex-shrink: 0;
@@ -83,30 +83,31 @@
         .pill-dot.offline { background: var(--gold); }
         .pill-dot.ok      { background: #5cad6b; }
 
-        /* ── Main panel ── */
+        /* ── Main panel (reduced padding) ── */
         .panel {
             width: 100%;
             max-width: 780px;
             background: var(--card);
             border: 1px solid var(--border);
-            border-radius: 28px;
-            padding: 32px 24px 28px;
-            margin-bottom: 16px;
+            border-radius: 24px;
+            padding: 20px 16px 20px;
+            margin-bottom: 12px;
             animation: fadeUp 0.5s 0.08s ease both;
         }
 
-        /* ── VS layout ── */
+        /* ── VS layout — MOBILE FIRST (horizontal row on all screens) ── */
         .vs-row {
             display: flex;
+            flex-direction: row;
             align-items: stretch;
-            gap: 0;
+            gap: 8px;
         }
         .choice-card {
             flex: 1;
             background: var(--paper);
             border: 1.5px solid var(--border);
             border-radius: var(--radius);
-            padding: 28px 18px 24px;
+            padding: 14px 10px 12px;
             text-align: center;
             cursor: pointer;
             transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
@@ -114,94 +115,93 @@
             box-shadow: var(--shadow);
         }
         .choice-card:hover {
-            transform: translateY(-5px);
+            transform: translateY(-3px);
             border-color: var(--accent);
             background: #1a1a1a;
-            box-shadow: 0 8px 24px rgba(158,42,47,0.2);
+            box-shadow: 0 6px 16px rgba(158,42,47,0.2);
         }
         .choice-card:active {
             transform: translateY(1px) scale(0.98);
-            box-shadow: 0 1px 0 #d9d2c8;
         }
         .choice-card.voted-winner {
             border-color: #5cad6b;
             background: #1a2a1a;
-            animation: winPulse 0.4s ease;
+            animation: winPulse 0.3s ease;
         }
         .choice-card.voted-loser {
-            opacity: 0.45;
+            opacity: 0.4;
             transform: scale(0.97);
         }
         @keyframes winPulse {
             0%   { transform: scale(1); }
-            40%  { transform: scale(1.04); }
+            50%  { transform: scale(1.02); }
             100% { transform: scale(1); }
         }
 
-        /* FIXED: Vertical rectangle images (portrait 3:4 aspect ratio) */
+        /* MOBILE OPTIMIZED: Smaller vertical rectangle images */
         .card-img {
             width: 100%;
-            aspect-ratio: 3 / 4;     /* Vertical rectangle — portrait orientation */
+            aspect-ratio: 2 / 3;  /* Taller for better mobile fit */
             object-fit: cover;
-            border-radius: 12px;
-            margin-bottom: 14px;
+            border-radius: 10px;
+            margin-bottom: 8px;
             background: var(--border);
             display: block;
         }
         .card-rank-hint {
-            font-size: 0.7rem;
+            font-size: 0.6rem;
             font-weight: 600;
-            letter-spacing: 0.1em;
+            letter-spacing: 0.08em;
             text-transform: uppercase;
             color: var(--ink3);
-            margin-bottom: 10px;
+            margin-bottom: 6px;
         }
         .card-name {
             font-family: 'Oswald', sans-serif;
-            font-size: clamp(1.2rem, 3vw, 1.7rem);
+            font-size: clamp(0.85rem, 3.5vw, 1.2rem);
             font-weight: 500;
-            line-height: 1.25;
+            line-height: 1.2;
             word-break: break-word;
             color: var(--ink);
-            margin: 4px 0 10px;
+            margin: 3px 0 6px;
         }
         .card-elo {
-            font-size: 0.72rem;
+            font-size: 0.6rem;
             color: var(--ink3);
             font-family: 'Oswald', monospace;
         }
 
-        /* VS divider */
+        /* VS divider — smaller on mobile */
         .vs-divider {
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 52px;
+            width: auto;
             flex-shrink: 0;
             position: relative;
             z-index: 1;
         }
         .vs-circle {
-            width: 44px;
-            height: 44px;
+            width: 34px;
+            height: 34px;
             border-radius: 50%;
             background: var(--gold);
             color: #000;
-            font-size: 0.75rem;
-            font-weight: 700;
-            letter-spacing: 0.05em;
+            font-size: 0.65rem;
+            font-weight: 800;
+            letter-spacing: 0.02em;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
         }
 
-        /* ── Action bar ── */
+        /* ── Action bar (more compact) ── */
         .action-bar {
             display: flex;
             justify-content: center;
-            gap: 12px;
-            margin-top: 24px;
+            gap: 10px;
+            margin-top: 18px;
             flex-wrap: wrap;
         }
         .btn {
@@ -209,44 +209,44 @@
             background: var(--card);
             color: var(--ink);
             font-family: 'Oswald', sans-serif;
-            font-size: 0.88rem;
+            font-size: 0.8rem;
             font-weight: 500;
-            padding: 9px 22px;
-            border-radius: 60px;
+            padding: 8px 18px;
+            border-radius: 50px;
             cursor: pointer;
             transition: background 0.12s, border-color 0.12s, transform 0.1s;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
         }
         .btn:hover  { background: var(--accent2); border-color: var(--accent); color: #000; }
         .btn:active { transform: scale(0.97); }
         .btn.primary { background: var(--gold); color: #000; border-color: var(--gold); }
         .btn.primary:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
 
-        /* ── Results panel ── */
+        /* ── Results panel (mobile optimized) ── */
         #resultsPanel { display: none; }
         .results-title {
             font-family: 'Oswald', sans-serif;
-            font-size: 1.4rem;
+            font-size: 1.2rem;
             font-weight: 500;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
         .rank-list {
             list-style: none;
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 5px;
         }
         .rank-item {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 12px 14px;
-            border-radius: 12px;
+            gap: 8px;
+            padding: 8px 10px;
+            border-radius: 10px;
             border: 1px solid var(--border);
             background: var(--paper);
             transition: background 0.15s;
@@ -254,76 +254,122 @@
         .rank-item:first-child { background: #1a1a0a; border-color: var(--gold); }
         .rank-num {
             font-weight: 600;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: var(--ink3);
-            width: 22px;
+            width: 20px;
             text-align: center;
             flex-shrink: 0;
         }
         .rank-item:first-child .rank-num { color: var(--gold); }
         .rank-name {
-            font-size: 1rem;
+            font-size: 0.85rem;
             font-weight: 500;
             flex: 1;
         }
         .rank-bar-wrap {
-            width: 80px;
-            height: 4px;
+            width: 60px;
+            height: 3px;
             background: var(--border);
-            border-radius: 4px;
+            border-radius: 3px;
             overflow: hidden;
             flex-shrink: 0;
         }
         .rank-bar {
             height: 100%;
             background: var(--accent);
-            border-radius: 4px;
+            border-radius: 3px;
             transition: width 0.6s ease;
         }
         .rank-item:first-child .rank-bar { background: var(--gold); }
         .rank-elo {
             font-family: 'Oswald', monospace;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             color: var(--ink3);
-            width: 46px;
+            width: 38px;
             text-align: right;
             flex-shrink: 0;
+        }
+
+        /* Rank thumbnails for results (small vertical) */
+        .rank-thumb {
+            width: 28px;
+            height: 42px;
+            object-fit: cover;
+            border-radius: 6px;
+            flex-shrink: 0;
+            background: var(--border);
         }
 
         /* ── Loading / error ── */
         .loading-state {
             text-align: center;
-            padding: 50px 20px;
+            padding: 30px 16px;
             color: var(--ink2);
         }
         .spinner {
-            width: 28px; height: 28px;
+            width: 24px; height: 24px;
             border: 2px solid var(--border);
             border-top-color: var(--accent);
             border-radius: 50%;
             animation: spin 0.7s linear infinite;
-            margin: 0 auto 16px;
+            margin: 0 auto 12px;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
         /* ── Footer ── */
         footer {
-            font-size: 0.72rem;
+            font-size: 0.6rem;
             color: var(--ink3);
             text-align: center;
-            margin-top: 10px;
+            margin-top: 8px;
             animation: fadeUp 0.5s 0.2s ease both;
         }
 
         @keyframes fadeUp {
-            from { opacity: 0; transform: translateY(14px); }
+            from { opacity: 0; transform: translateY(10px); }
             to   { opacity: 1; transform: translateY(0); }
         }
 
+        /* ── EXTRA SMALL PHONES (under 450px) ── */
+        @media (max-width: 480px) {
+            body {
+                padding: 12px 10px 30px;
+            }
+            .panel {
+                padding: 14px 12px 16px;
+            }
+            .choice-card {
+                padding: 10px 8px 10px;
+            }
+            .vs-row {
+                gap: 6px;
+            }
+            .vs-circle {
+                width: 28px;
+                height: 28px;
+                font-size: 0.55rem;
+            }
+            .card-img {
+                aspect-ratio: 2 / 3;
+            }
+            .card-name {
+                font-size: 0.75rem;
+            }
+            .card-rank-hint {
+                font-size: 0.5rem;
+            }
+        }
+
+        /* ── Make sure horizontal row stays on all devices ── */
         @media (max-width: 560px) {
-            .vs-row { flex-direction: column; }
-            .vs-divider { width: auto; height: 32px; }
-            .panel { padding: 20px 14px 20px; }
+            /* Override any column behavior — keep horizontal */
+            .vs-row {
+                flex-direction: row !important;
+            }
+            .vs-divider {
+                width: auto !important;
+                height: auto !important;
+            }
         }
     </style>
 </head>
@@ -332,7 +378,7 @@
 <div class="header">
     <div class="eyebrow">5-Stripes Decision Tool</div>
     <h1>ATL UTD <em>Kit Ranker</em></h1>
-    <div class="sub">Pick whichever kit you like best</div>
+    <div class="sub">Pick the kit that hits different</div>
     <div class="pill" id="statusPill">
         <span class="pill-dot" id="statusDot"></span>
         <span id="statusText">Loading…</span>
@@ -369,7 +415,7 @@
 // ─────────────────────────────────────────────
 //  CONFIG — paste your Apps Script URL here
 // ─────────────────────────────────────────────
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwFsAwOlDCXpesp3vlr056p_5u8kAJGh_KoPl4Opz0amBo1x9o8OyVk7GrRz9h-a77Y/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbypt-e4Gpn8qM7sfhtGLUJBYRRmFblKhqZ9rqQAzbQmp9dtcLW4e5nUvGttmd-hrR27/exec";
 // ─────────────────────────────────────────────
 //  Elo settings
 // ─────────────────────────────────────────────
@@ -379,12 +425,12 @@ const DEFAULT_ELO  = 1500;
 // ─────────────────────────────────────────────
 //  State
 // ─────────────────────────────────────────────
-let allItems   = [];   // [{ id: string, name: string, elo: number }]
+let allItems   = [];
 let currentPair = { a: null, b: null };
 let totalVotes  = 0;
-let locked      = false;  // prevent double-vote during animation
+let locked      = false;
 
-// Session ID (for server-side dedup)
+// Session ID
 let sessionId = localStorage.getItem("ranker_session");
 if (!sessionId) {
     sessionId = "sess_" + Date.now() + "_" + Math.random().toString(36).slice(2, 10);
@@ -392,7 +438,7 @@ if (!sessionId) {
 }
 
 // ─────────────────────────────────────────────
-//  XSS-safe HTML escape (covers attribute context too)
+//  Helper functions
 // ─────────────────────────────────────────────
 function esc(str) {
     return String(str).replace(/[&<>"']/g, c => ({
@@ -401,18 +447,12 @@ function esc(str) {
     })[c]);
 }
 
-// ─────────────────────────────────────────────
-//  Status pill
-// ─────────────────────────────────────────────
-function setStatus(text, state) {   // state: '' | 'ok' | 'offline'
+function setStatus(text, state) {
     document.getElementById("statusText").textContent = text;
     const dot = document.getElementById("statusDot");
     dot.className = "pill-dot" + (state ? " " + state : "");
 }
 
-// ─────────────────────────────────────────────
-//  Persist / load Elo from localStorage
-// ─────────────────────────────────────────────
 function persistElos() {
     const obj = {};
     allItems.forEach(it => { obj[String(it.id)] = it.elo; });
@@ -424,9 +464,6 @@ function loadStoredElos() {
     catch { return {}; }
 }
 
-// ─────────────────────────────────────────────
-//  JSONP helper — bypasses CORS on Apps Script
-// ─────────────────────────────────────────────
 function jsonp(url) {
     return new Promise((resolve, reject) => {
         const cbName = "_cb_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7);
@@ -453,9 +490,6 @@ function jsonp(url) {
 // ─────────────────────────────────────────────
 //  Fetch items from Google Sheets
 // ─────────────────────────────────────────────
-// ─────────────────────────────────────────────
-//  Fetch items with GLOBAL Elo scores
-// ─────────────────────────────────────────────
 async function fetchItems() {
     try {
         const items = await jsonp(`${SCRIPT_URL}?action=getItems`);
@@ -464,25 +498,22 @@ async function fetchItems() {
         if (!Array.isArray(items) || items.length < 2)
             throw new Error("Need at least 2 items in the Items sheet.");
         
-        // Use the Elo scores from the server (global rankings)
+        const stored = loadStoredElos();
         allItems = items.map(it => ({
             id:       String(it.id),
             name:     String(it.name),
             imageURL: String(it.imageURL || ""),
-            elo:      it.elo  // ← Now using global Elo from server!
+            elo:      stored[String(it.id)] ?? DEFAULT_ELO
         }));
-        
-        // Also store a local backup
-        persistElos();
         
         return true;
     } catch (err) {
         console.error(err);
         document.getElementById("vsContainer").innerHTML = `
             <div class="loading-state">
-                <div style="font-size:1.6rem; margin-bottom:12px;">⚠️</div>
+                <div style="font-size:1.4rem; margin-bottom:10px;">⚠️</div>
                 <strong>${esc(err.message)}</strong>
-                <div style="margin-top:12px; font-size:0.85rem; line-height:1.7; color:#9a9087;">
+                <div style="margin-top:10px; font-size:0.7rem; line-height:1.5; color:#9a9087;">
                     1. Deploy Apps Script as a Web App<br>
                     2. Execute as <em>Me</em>, access <em>Anyone</em><br>
                     3. Paste the correct URL into SCRIPT_URL
@@ -494,75 +525,13 @@ async function fetchItems() {
 }
 
 // ─────────────────────────────────────────────
-//  Record a vote (updates GLOBAL rankings)
-// ─────────────────────────────────────────────
-async function recordVote(winnerId) {
-    if (locked) return;
-    locked = true;
-
-    const winner = allItems.find(i => i.id === winnerId);
-    const loser  = currentPair.a.id === winnerId ? currentPair.b : currentPair.a;
-    if (!winner || !loser) { locked = false; return; }
-
-    // ── Show animation immediately ──
-    const cards = document.querySelectorAll(".choice-card");
-    cards.forEach(card => {
-        if (card.dataset.choice === winnerId) card.classList.add("voted-winner");
-        else                                  card.classList.add("voted-loser");
-    });
-
-    // ── Send vote to server (updates global rankings) ──
-    const params = new URLSearchParams({
-        action:    "saveVote",
-        winnerId:  winner.id,
-        loserId:   loser.id,
-        sessionId: sessionId
-    });
-
-    try {
-        const result = await jsonp(`${SCRIPT_URL}?${params}`);
-        
-        if (result.status === "success") {
-            // Update local Elo scores with server's calculated values
-            winner.elo = result.newWinnerElo;
-            loser.elo = result.newLoserElo;
-            persistElos();
-            totalVotes++;
-            setStatus(`${totalVotes} vote${totalVotes !== 1 ? "s" : ""} recorded (global)`, "ok");
-        } else {
-            throw new Error(result.error || "Unknown error");
-        }
-    } catch (err) {
-        console.warn("Failed to save vote to server:", err);
-        setStatus("Offline — vote saved locally only", "offline");
-        
-        // Fallback: local Elo update
-        const expWin  = 1 / (1 + Math.pow(10, (loser.elo - winner.elo) / 400));
-        winner.elo += K_FACTOR * (1 - expWin);
-        loser.elo  += K_FACTOR * (0 - expWin);
-        persistElos();
-        totalVotes++;
-    }
-
-    // ── Next matchup after animation delay ──
-    setTimeout(async () => {
-        // Refresh all items to get latest global rankings
-        await fetchItems();
-        currentPair = getRandomPair();
-        renderMatchup();
-        updateRankingDisplay();
-        locked = false;
-    }, 320);
-}
-
-// ─────────────────────────────────────────────
-//  Pick a random pair (safe for length === 2)
+//  Pick a random pair
 // ─────────────────────────────────────────────
 function getRandomPair() {
     if (allItems.length < 2) return null;
     const idxA = Math.floor(Math.random() * allItems.length);
     let   idxB = Math.floor(Math.random() * (allItems.length - 1));
-    if (idxB >= idxA) idxB++;         // guaranteed different, no infinite loop
+    if (idxB >= idxA) idxB++;
     return { a: allItems[idxA], b: allItems[idxB] };
 }
 
@@ -576,8 +545,8 @@ function renderMatchup() {
         return;
     }
     const { a, b } = currentPair;
-    const imgA = a.imageURL ? `<img class="card-img" src="${esc(a.imageURL)}" alt="${esc(a.name)}" draggable="false" loading="lazy">` : `<div class="card-img" style="background: var(--border); display: flex; align-items: center; justify-content: center; color: var(--ink3); font-size: 0.8rem;">No image</div>`;
-    const imgB = b.imageURL ? `<img class="card-img" src="${esc(b.imageURL)}" alt="${esc(b.name)}" draggable="false" loading="lazy">` : `<div class="card-img" style="background: var(--border); display: flex; align-items: center; justify-content: center; color: var(--ink3); font-size: 0.8rem;">No image</div>`;
+    const imgA = a.imageURL ? `<img class="card-img" src="${esc(a.imageURL)}" alt="${esc(a.name)}" draggable="false" loading="lazy">` : `<div class="card-img" style="background: var(--border); display: flex; align-items: center; justify-content: center; color: var(--ink3); font-size: 0.7rem;">No image</div>`;
+    const imgB = b.imageURL ? `<img class="card-img" src="${esc(b.imageURL)}" alt="${esc(b.name)}" draggable="false" loading="lazy">` : `<div class="card-img" style="background: var(--border); display: flex; align-items: center; justify-content: center; color: var(--ink3); font-size: 0.7rem;">No image</div>`;
     c.innerHTML = `
         <div class="choice-card" data-choice="${esc(a.id)}">
             ${imgA}
@@ -595,7 +564,7 @@ function renderMatchup() {
 }
 
 // ─────────────────────────────────────────────
-//  Update ranking list
+//  Update ranking display
 // ─────────────────────────────────────────────
 function updateRankingDisplay() {
     const sorted   = [...allItems].sort((a, b) => b.elo - a.elo);
@@ -606,7 +575,7 @@ function updateRankingDisplay() {
     const list = document.getElementById("rankList");
     list.innerHTML = sorted.map((item, i) => {
         const pct = Math.round(((item.elo - minElo) / eloRange) * 100);
-        const thumb = item.imageURL ? `<img src="${esc(item.imageURL)}" alt="" style="width:40px;height:53px;object-fit:cover;border-radius:8px;flex-shrink:0;">` : `<div style="width:40px;height:53px;background:var(--border);border-radius:8px;flex-shrink:0;"></div>`;
+        const thumb = item.imageURL ? `<img class="rank-thumb" src="${esc(item.imageURL)}" alt="">` : `<div class="rank-thumb" style="background: var(--border);"></div>`;
         return `
             <li class="rank-item">
                 <span class="rank-num">${i + 1}</span>
@@ -631,22 +600,22 @@ async function recordVote(winnerId) {
     const loser  = currentPair.a.id === winnerId ? currentPair.b : currentPair.a;
     if (!winner || !loser) { locked = false; return; }
 
-    // ── Optimistic Elo update (local) ──
-    const expWin  = 1 / (1 + Math.pow(10, (loser.elo  - winner.elo) / 400));
-    const expLose = 1 / (1 + Math.pow(10, (winner.elo - loser.elo)  / 400));
+    // Optimistic Elo update
+    const expWin  = 1 / (1 + Math.pow(10, (loser.elo - winner.elo) / 400));
+    const expLose = 1 / (1 + Math.pow(10, (winner.elo - loser.elo) / 400));
     winner.elo += K_FACTOR * (1 - expWin);
     loser.elo  += K_FACTOR * (0 - expLose);
     persistElos();
     totalVotes++;
 
-    // ── Animate cards before switching ──
+    // Animate
     const cards = document.querySelectorAll(".choice-card");
     cards.forEach(card => {
         if (card.dataset.choice === winnerId) card.classList.add("voted-winner");
         else                                  card.classList.add("voted-loser");
     });
 
-    // ── Fire-and-forget to Google Sheets ──
+    // Fire-and-forget to Google Sheets
     const params = new URLSearchParams({
         action:    "saveVote",
         winnerId:  winner.id,
@@ -665,13 +634,13 @@ async function recordVote(winnerId) {
         })
         .catch(() => setStatus("Offline — saved locally", "offline"));
 
-    // ── Next matchup after short animation delay ──
+    // Next matchup
     setTimeout(() => {
         currentPair = getRandomPair();
         renderMatchup();
         updateRankingDisplay();
         locked = false;
-    }, 320);
+    }, 300);
 }
 
 // ─────────────────────────────────────────────
@@ -703,7 +672,6 @@ async function init() {
     updateRankingDisplay();
     setStatus("Ready — pick your favorite kit", "ok");
 
-    // Single delegated listener on the container
     document.getElementById("vsContainer").addEventListener("click", e => {
         const card = e.target.closest(".choice-card");
         if (card?.dataset?.choice) recordVote(card.dataset.choice);
