@@ -165,11 +165,6 @@
             color: var(--ink);
             margin: 3px 0 6px;
         }
-        .card-elo {
-            font-size: 0.6rem;
-            color: var(--ink3);
-            font-family: 'Oswald', monospace;
-        }
 
         /* VS divider — smaller on mobile */
         .vs-divider {
@@ -376,9 +371,9 @@
 <body>
 
 <div class="header">
-    <div class="eyebrow">5-Stripes Decision Tool</div>
+    <div class="eyebrow">5-Stripes, 2 options</div>
     <h1>ATL UTD <em>Kit Ranker</em></h1>
-    <div class="sub">Pick the kit that hits different</div>
+    <div class="sub">Pick the kit that you like more</div>
     <div class="pill" id="statusPill">
         <span class="pill-dot" id="statusDot"></span>
         <span id="statusText">Loading…</span>
@@ -390,7 +385,7 @@
     <div class="vs-row" id="vsContainer">
         <div class="loading-state">
             <div class="spinner"></div>
-            Loading kits from your sheet…
+            Loading kits from the cloud…
         </div>
     </div>
     <div class="action-bar">
@@ -401,7 +396,7 @@
 <!-- Results panel -->
 <div class="panel" id="resultsPanel">
     <div class="results-title">
-        🏆 Final ranking
+        🏆 Current Leaderboard
     </div>
     <ul class="rank-list" id="rankList"></ul>
     <div class="action-bar">
@@ -552,14 +547,12 @@ function renderMatchup() {
             ${imgA}
             <div class="card-rank-hint">Option A</div>
             <div class="card-name">${esc(a.name)}</div>
-            <div class="card-elo">Elo ${Math.round(a.elo)}</div>
         </div>
         <div class="vs-divider"><div class="vs-circle">VS</div></div>
         <div class="choice-card" data-choice="${esc(b.id)}">
             ${imgB}
             <div class="card-rank-hint">Option B</div>
             <div class="card-name">${esc(b.name)}</div>
-            <div class="card-elo">Elo ${Math.round(b.elo)}</div>
         </div>`;
 }
 
